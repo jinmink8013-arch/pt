@@ -1,0 +1,989 @@
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>택시 매출 플래너</title>
+    <meta name="application-name" content="택시 매출 플래너">
+    <meta name="apple-mobile-web-app-title" content="택시 매출 플래너">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#F59E0B">
+
+    <!-- 전용 황금색 택시 아이콘 & PWA 매니페스트 (파란 원 속 노란 택시 아이콘 디자인 고정 적용) -->
+    <link id="favicon-link" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23F59E0B'/%3E%3Crect x='186' y='64' width='140' height='44' rx='12' fill='%231E293B'/%3E%3Ctext x='256' y='94' font-family='sans-serif' font-weight='900' font-size='26' fill='%23FDE047' text-anchor='middle'%3ETAXI%3C/text%3E%3Crect x='110' y='124' width='292' height='136' rx='36' fill='%23FFFFFF'/%3E%3Crect x='140' y='142' width='232' height='54' rx='14' fill='%231E3A8A'/%3E%3Ccircle cx='152' cy='226' r='18' fill='%23F59E0B'/%3E%3Ccircle cx='360' cy='226' r='18' fill='%23F59E0B'/%3E%3Ctext x='256' y='356' font-family='sans-serif' font-weight='900' font-size='74' fill='%230F172A' text-anchor='middle'%3E택시매출%3C/text%3E%3Ctext x='256' y='432' font-family='sans-serif' font-weight='800' font-size='56' fill='%23FFFFFF' text-anchor='middle'%3E플래너%3C/text%3E%3C/svg%3E">
+    <link id="apple-icon-link" rel="apple-touch-icon" sizes="512x512">
+    <link id="manifest-link" rel="manifest">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Patrick+Hand&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        // 홈 화면 추가용 고해상도 황금색 택시 로고 아이콘 생성 (파란 원 속 노란 택시 디자인)
+        (function setupTaxiAppIcon() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            // 1. 선명한 골드 옐로우 배경
+            const grad = ctx.createLinearGradient(0, 0, 512, 512);
+            grad.addColorStop(0, '#FBBF24');
+            grad.addColorStop(1, '#D97706');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, 512, 512, 110);
+            ctx.fill();
+
+            // 2. 상단 TAXI 갓등
+            ctx.fillStyle = '#1E293B';
+            ctx.beginPath();
+            ctx.roundRect(186, 62, 140, 44, 12);
+            ctx.fill();
+            ctx.fillStyle = '#FEF08A';
+            ctx.font = '900 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('TAXI', 256, 92);
+
+            // 3. 중앙 택시 차체
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.roundRect(106, 118, 300, 140, 36);
+            ctx.fill();
+
+            // 앞유리
+            ctx.fillStyle = '#1E3A8A';
+            ctx.beginPath();
+            ctx.roundRect(136, 136, 240, 54, 14);
+            ctx.fill();
+
+            // 헤드라이트
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.arc(148, 222, 18, 0, Math.PI * 2);
+            ctx.arc(364, 222, 18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 4. 하단 텍스트 ("택시매출" / "플래너")
+            ctx.fillStyle = '#0F172A';
+            ctx.font = '900 72px "Noto Sans KR", sans-serif';
+            ctx.fillText('택시매출', 256, 355);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '800 54px "Noto Sans KR", sans-serif';
+            ctx.fillText('플래너', 256, 430);
+
+            const iconDataUrl = canvas.toDataURL('image/png');
+            document.getElementById('favicon-link').href = iconDataUrl;
+            document.getElementById('apple-icon-link').href = iconDataUrl;
+
+            // Web App Manifest 동적 연결
+            const manifest = {
+                name: '택시 매출 플래너',
+                short_name: '택시매출',
+                start_url: window.location.href,
+                display: 'standalone',
+                background_color: '#1E3A8A',
+                theme_color: '#F59E0B',
+                icons: [
+                    { src: iconDataUrl, sizes: '192x192', type: 'image/png', purpose: 'any' },
+                    { src: iconDataUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+                ]
+            };
+            const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+            document.getElementById('manifest-link').href = URL.createObjectURL(manifestBlob);
+        })();
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', 'Inter', sans-serif;
+            background-color: #172554;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-hand {
+            font-family: 'Patrick Hand', cursive, sans-serif;
+        }
+        /* 모바일 좁은 칸에서도 숫자가 절대 잘리지 않도록 최적화 /
+        .num-tight {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.05em;
+            white-space: nowrap;
+        }
+        / 노트 줄무늬 효과 */
+        .note-lines {
+            background-image: linear-gradient(to bottom, transparent 94%, #e2e8f0 95%);
+            background-size: 100% 33.33%;
+        }
+        @media print {
+            body { background: white !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-10">
+
+    <!-- 상단 앱 헤더 & 대시보드 -->
+    <div class="max-w-4xl mx-auto px-2 sm:px-4 pt-3 sm:pt-5">
+        <div class="bg-blue-950/90 border border-blue-700/60 rounded-2xl p-3 sm:p-5 shadow-2xl text-white">
+            
+            <!-- 상단 타이틀 바 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-blue-800/80">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-amber-400 text-slate-950 text-xl font-black shadow-md">🚖</span>
+                    <div>
+                        <h1 class="text-base sm:text-xl font-black tracking-tight text-amber-300 leading-tight">택시 월 매출 스마트 플래너</h1>
+                        <p class="text-[11px] sm:text-xs text-blue-200">실적 입력 시 남은 영업일 목표액 자동 증감</p>
+                    </div>
+                </div>
+
+                <!-- 월 선택 컨트롤 (현재 달 자동 고정 + 이동 가능) -->
+                <div class="flex items-center gap-1.5 bg-blue-900/90 px-2.5 py-1.5 rounded-xl border border-blue-700">
+                    <button onclick="changeMonth(-1)" class="p-1 hover:bg-blue-800 rounded-lg text-blue-200 active:scale-95" title="이전 달">◀</button>
+                    <span id="header-month-label" class="font-extrabold text-sm sm:text-base px-1.5 text-white num-tight">2026년 11월</span>
+                    <button onclick="changeMonth(1)" class="p-1 hover:bg-blue-800 rounded-lg text-blue-200 active:scale-95" title="다음 달">▶</button>
+                    <button onclick="goToCurrentRealMonth()" class="ml-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-[11px] px-2 py-1 rounded-lg shadow active:scale-95">
+                        이번달
+                    </button>
+                </div>
+            </div>
+
+            <!-- 핵심 요약 카드 4개 (모바일 2x2 / 데스크탑 4열) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-3">
+                <!-- 1. 월 목표 금액 -->
+                <div class="bg-blue-900/70 rounded-xl p-2.5 border border-blue-700/50">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-blue-200 font-medium">월 목표 매출</span>
+                        <button onclick="openSettingsModal()" class="text-[10px] bg-blue-800 hover:bg-blue-700 px-1.5 py-0.5 rounded text-amber-300 font-bold">수정</button>
+                    </div>
+                    <div id="stat-monthly-goal" class="text-base sm:text-lg font-black text-white mt-0.5 num-tight">6,000,000원</div>
+                    <div id="stat-work-days-info" class="text-[10px] text-blue-300 mt-0.5">목표 22일 근무 · 일 최대 30만</div>
+                </div>
+
+                <!-- 2. 현재 누적 실적 -->
+                <div class="bg-blue-900/70 rounded-xl p-2.5 border border-blue-700/50">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-blue-200 font-medium">현재 누적 실적</span>
+                        <span id="stat-achievement-rate" class="text-[11px] font-extrabold text-emerald-400">0%</span>
+                    </div>
+                    <div id="stat-total-actual" class="text-base sm:text-lg font-black text-emerald-400 mt-0.5 num-tight">0원</div>
+                    <div id="stat-completed-days" class="text-[10px] text-blue-300 mt-0.5">실적 입력 0일 완료</div>
+                </div>
+
+                <!-- 3. 남은 목표 잔액 -->
+                <div class="bg-blue-900/70 rounded-xl p-2.5 border border-blue-700/50">
+                    <div class="text-[11px] text-blue-200 font-medium">남은 목표 금액</div>
+                    <div id="stat-remaining-amount" class="text-base sm:text-lg font-black text-amber-300 mt-0.5 num-tight">6,000,000원</div>
+                    <div id="stat-remaining-days" class="text-[10px] text-blue-300 mt-0.5">남은 영업일 22일</div>
+                </div>
+
+                <!-- 4. 남은 영업일 필요 평균 (자동 증감 기준) -->
+                <div id="card-daily-needed" class="bg-blue-900/70 rounded-xl p-2.5 border border-blue-700/50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-blue-200 font-medium">남은 일 평균목표</span>
+                        <span id="stat-cap-badge" class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">여유</span>
+                    </div>
+                    <div id="stat-needed-per-day" class="text-base sm:text-lg font-black text-white mt-0.5 num-tight">272,700원</div>
+                    <div id="stat-delta-hint" class="text-[10px] text-blue-300 mt-0.5">실적 입력 시 자동 재계산</div>
+                </div>
+            </div>
+
+            <!-- 상태 안내 배너 & 빠른 도구 -->
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 bg-blue-950/80 px-3 py-2 rounded-xl border border-blue-800/80 text-[11px] sm:text-xs">
+                <div class="flex items-center gap-1.5 text-amber-200 font-semibold">
+                    <span>🛡️</span>
+                    <span>토요일 전면 휴무 · 월요일 탄력 · 일 30만원 상한 자동증감</span>
+                </div>
+                <div class="flex items-center gap-1.5 no-print">
+                    <button onclick="resetToSmartSchedule()" class="bg-blue-800 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg font-bold active:scale-95">
+                        스케줄 초기화
+                    </button>
+                    <span class="text-emerald-400 font-bold flex items-center gap-1">● 자동저장</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 노트형 블루 프레임 달력 본문 -->
+        <div class="mt-3 sm:mt-4 bg-[#274684] p-2 sm:p-4 rounded-3xl shadow-2xl border-2 border-blue-400/30">
+            <!-- 달력 상단 감성 필기체 월 헤더 -->
+            <div class="flex items-end justify-between px-2 pb-2 text-white">
+                <div>
+                    <span id="calendar-year-sub" class="text-xs font-bold tracking-widest text-blue-200 block">2026</span>
+                    <h2 id="calendar-english-month" class="font-hand text-3xl sm:text-4xl tracking-wider font-bold text-white leading-none">NOVEMBER</h2>
+                </div>
+                <div class="text-right text-[11px] text-blue-100">
+                    <span class="inline-block bg-blue-900/70 px-2 py-1 rounded-lg border border-blue-400/30">
+                        날짜 터치: <b>실적입력 / 휴무변경</b>
+                    </span>
+                </div>
+            </div>
+
+            <!-- 요일 헤더 (SUN ~ SAT) -->
+            <div class="grid grid-cols-7 gap-0.5 sm:gap-1 text-center font-extrabold text-[11px] sm:text-xs mb-1">
+                <div class="bg-rose-400 text-white py-1.5 rounded-t-lg">SUN</div>
+                <div class="bg-sky-300 text-slate-900 py-1.5 rounded-t-lg">MON</div>
+                <div class="bg-sky-300 text-slate-900 py-1.5 rounded-t-lg">TUE</div>
+                <div class="bg-sky-300 text-slate-900 py-1.5 rounded-t-lg">WED</div>
+                <div class="bg-sky-300 text-slate-900 py-1.5 rounded-t-lg">THU</div>
+                <div class="bg-sky-300 text-slate-900 py-1.5 rounded-t-lg">FRI</div>
+                <div class="bg-sky-400 text-slate-950 py-1.5 rounded-t-lg">SAT</div>
+            </div>
+
+            <!-- 달력 날짜 그리드 (7열) -->
+            <div id="calendar-grid" class="grid grid-cols-7 gap-0.5 sm:gap-1 bg-blue-900/40 rounded-b-xl overflow-hidden">
+                <!-- JavaScript로 동적 생성 -->
+            </div>
+
+            <!-- 하단 시그니처 -->
+            <div class="text-center mt-2.5 text-blue-200/80 font-hand text-sm tracking-wide">
+                @taxi-smart-planner · 안전운전 하세요 🚖
+            </div>
+        </div>
+    </div>
+
+    <!-- 일일 실적 입력 및 근무/휴무 수정 모달 -->
+    <div id="day-modal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-xs hidden items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                    <span id="modal-date-subtitle" class="text-xs font-bold text-blue-600">2026년 11월 15일 (일)</span>
+                    <h3 class="text-lg font-black text-slate-900">일일 매출 실적 & 근무 설정</h3>
+                </div>
+                <button onclick="closeDayModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold">✕</button>
+            </div>
+
+            <div class="mt-4 space-y-4">
+                <!-- 근무 / 휴무 토글 버튼 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">근무 상태 선택 (즉시 저장)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btn-modal-work" onclick="setModalWorkStatus(true)" class="py-2.5 rounded-xl font-extrabold text-sm border-2 transition-all">
+                            🚖 영업 (근무)
+                        </button>
+                        <button id="btn-modal-off" onclick="setModalWorkStatus(false)" class="py-2.5 rounded-xl font-extrabold text-sm border-2 transition-all">
+                            🛌 휴무 (충전)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 오늘 목표액 안내 -->
+                <div id="modal-goal-box" class="bg-blue-50 rounded-xl p-3 border border-blue-100 flex items-center justify-between">
+                    <span class="text-xs font-bold text-blue-800">해당일 배정 목표</span>
+                    <span id="modal-current-goal" class="text-base font-black text-blue-900 num-tight">282,000원</span>
+                </div>
+
+                <!-- 실제 매출 실적 입력 -->
+                <div id="modal-actual-section">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="input-actual-amount" class="text-xs font-bold text-slate-700">실제 매출 입력 (원)</label>
+                        <button onclick="clearActualInput()" class="text-[11px] text-rose-500 font-bold hover:underline">실적 지우기(미입력)</button>
+                    </div>
+                    <input type="number" id="input-actual-amount" inputmode="numeric" placeholder="예: 285000" 
+                           class="w-full text-right text-xl font-black px-3.5 py-2.5 rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:outline-none text-slate-900">
+                    
+                    <!-- 빠른 금액 버튼 -->
+                    <div class="grid grid-cols-4 gap-1.5 mt-2">
+                        <button type="button" onclick="addQuickAmount(10000)" class="bg-slate-100 hover:bg-slate-200 py-1.5 rounded-lg text-xs font-bold text-slate-700">+1만</button>
+                        <button type="button" onclick="addQuickAmount(50000)" class="bg-slate-100 hover:bg-slate-200 py-1.5 rounded-lg text-xs font-bold text-slate-700">+5만</button>
+                        <button type="button" onclick="setGoalAmountToInput()" class="bg-blue-100 hover:bg-blue-200 py-1.5 rounded-lg text-xs font-bold text-blue-800">목표달성</button>
+                        <button type="button" onclick="setExactAmount(300000)" class="bg-amber-100 hover:bg-amber-200 py-1.5 rounded-lg text-xs font-bold text-amber-800">30만</button>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-2 leading-snug">
+                        💡 실적을 저장하면 <b>아직 실적이 없는 남은 영업일들의 목표금액</b>이 자동으로 증감 재계산됩니다.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-2">
+                <button onclick="closeDayModal()" class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 text-sm">취소</button>
+                <button onclick="saveDayModal()" class="py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 font-extrabold text-white text-sm shadow-md">저장 및 재계산</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 월 목표 및 상한 설정 모달 -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-xs hidden items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-lg font-black text-slate-900">월 목표 및 근무 기준 설정</h3>
+                <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold">✕</button>
+            </div>
+
+            <div class="mt-4 space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">월 목표 매출액 (원)</label>
+                    <input type="number" id="setting-monthly-goal" inputmode="numeric" class="w-full text-right text-lg font-black px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">기준 목표 근무일수 (일)</label>
+                    <input type="number" id="setting-target-days" inputmode="numeric" min="15" max="30" class="w-full text-right text-lg font-black px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">일 최대 목표 상한선 (과로 방지, 원)</label>
+                    <input type="number" id="setting-daily-cap" inputmode="numeric" class="w-full text-right text-lg font-black px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-blue-600 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-2">
+                <button onclick="closeSettingsModal()" class="py-2.5 rounded-xl bg-slate-100 font-bold text-slate-700 text-sm">닫기</button>
+                <button onclick="saveSettingsModal()" class="py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 font-extrabold text-white text-sm shadow">설정 저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 전역 상태 및 현재 날짜 자동 고정 로직
+        // ==========================================
+        const STORAGE_KEY = 'taxi_sales_planner_v5';
+        const ENGLISH_MONTHS = [
+            'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+            'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+        ];
+        const DAY_NAMES_KR = ['일', '월', '화', '수', '목', '금', '토'];
+
+        // 실제 기기 날짜 기준 연/월 반환 (달이 바뀌면 자동으로 해당 달에 고정)
+        function getActiveRealYearMonth() {
+            const now = new Date();
+            let y = now.getFullYear();
+            let m = now.getMonth() + 1; // 1~12
+            // 최소 시작 기준 2026년 11월 보장
+            if (y < 2026 || (y === 2026 && m < 11)) {
+                y = 2026;
+                m = 11;
+            }
+            return { year: y, month: m };
+        }
+
+        let currentYear = getActiveRealYearMonth().year;
+        let currentMonth = getActiveRealYearMonth().month;
+        let lastCheckedRealMonthKey = `${currentYear}-${currentMonth}`;
+
+        // 전체 앱 데이터 구조
+        let appData = {
+            settings: {
+                monthlyGoal: 6000000,   // 기본 600만원
+                targetWorkDays: 22,     // 기본 22일 근무
+                dailyCap: 300000        // 일 최대 30만원 상한
+            },
+            months: {} // "2026-11": { days: { "1": { isWork, actual, manualWork } } }
+        };
+
+        let selectedDayNumber = null;
+        let modalTempIsWork = true;
+
+        // ==========================================
+        // 2. 로컬 스토리지 저장 및 로드
+        // ==========================================
+        function loadAppData() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && parsed.settings) {
+                        appData.settings = { ...appData.settings, ...parsed.settings };
+                    }
+                    if (parsed && parsed.months) {
+                        appData.months = parsed.months;
+                    }
+                }
+            } catch (e) {
+                console.error('저장 데이터 로드 오류:', e);
+            }
+        }
+
+        function saveAppData() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            } catch (e) {
+                console.error('저장 데이터 기록 오류:', e);
+            }
+        }
+
+        function getMonthKey(y, m) {
+            return `${y}-${String(m).padStart(2, '0')}`;
+        }
+
+        // ==========================================
+        // 3. 토요일 전면 휴무 + 월요일 탄력 22일 스케줄러
+        // ==========================================
+        function createSmartMonthSchedule(year, month) {
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const targetDays = appData.settings.targetWorkDays || 22;
+            const daysObj = {};
+
+            const mondays = [];
+            const sundays = [];
+            const tueToFri = [];
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dow = new Date(year, month - 1, d).getDay(); // 0:일, 1:월 ... 6:토
+                daysObj[d] = {
+                    isWork: false,
+                    actual: null,       // null이면 미입력, 숫자면 입력된 실적
+                    manualWork: false   // 사용자가 직접 변경했는지 여부
+                };
+
+                if (dow === 6) {
+                    // 토요일은 무조건 전면 휴무
+                    daysObj[d].isWork = false;
+                } else if (dow === 1) {
+                    mondays.push(d);
+                } else if (dow === 0) {
+                    sundays.push(d);
+                } else {
+                    tueToFri.push(d);
+                }
+            }
+
+            // 1순위: 화~금요일은 기본 영업일 배치
+            let assigned = 0;
+            for (const d of tueToFri) {
+                if (assigned < targetDays) {
+                    daysObj[d].isWork = true;
+                    assigned++;
+                }
+            }
+
+            // 2순위: 월요일 탄력 배정 (22일 기준 채우기 위해 필요한 주차만큼 월요일 영업)
+            for (const d of mondays) {
+                if (assigned < targetDays) {
+                    daysObj[d].isWork = true;
+                    assigned++;
+                }
+            }
+
+            // 3순위: 그래도 목표 근무일(22일)이 부족하면 일요일 중 일부 보충
+            for (const d of sundays) {
+                if (assigned < targetDays) {
+                    daysObj[d].isWork = true;
+                    assigned++;
+                }
+            }
+
+            return { days: daysObj };
+        }
+
+        function ensureMonthData(year, month) {
+            const key = getMonthKey(year, month);
+            if (!appData.months[key] || !appData.months[key].days) {
+                appData.months[key] = createSmartMonthSchedule(year, month);
+                saveAppData();
+            }
+            return appData.months[key];
+        }
+
+        // ==========================================
+        // 4. 핵심 알고리즘: 실적 입력에 따른 남은 영업일 목표금액 자동 증감
+        // ==========================================
+        function calculateDynamicGoals(year, month) {
+            const monthData = ensureMonthData(year, month);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const monthlyGoal = appData.settings.monthlyGoal;
+            const dailyCap = appData.settings.dailyCap;
+
+            let totalWorkDays = 0;
+            let completedWorkDays = 0;
+            let totalActualEarned = 0;
+            const uncompletedDays = []; // 실적이 아직 입력되지 않은 영업일 목록
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const info = monthData.days[d];
+                if (!info.isWork) continue;
+                totalWorkDays++;
+
+                const hasActual = info.actual !== null && info.actual !== '' && !isNaN(Number(info.actual));
+                if (hasActual) {
+                    completedWorkDays++;
+                    totalActualEarned += Number(info.actual);
+                } else {
+                    const dow = new Date(year, month - 1, d).getDay();
+                    // 금요일(5)은 피크타임 가중치 1.06, 월요일(1)은 0.95, 일반 평일 1.0
+                    let weight = 1.0;
+                    if (dow === 5) weight = 1.06;
+                    else if (dow === 1) weight = 0.95;
+                    uncompletedDays.push({ day: d, dow, weight });
+                }
+            }
+
+            // 기준 평균 일당 (초기 계획 참고용)
+            const baseDailyGoal = totalWorkDays > 0 ? Math.round(monthlyGoal / totalWorkDays / 1000) * 1000 : 0;
+
+            // 남은 목표 금액 = 월 목표(600만) - 현재까지 입력된 누적 실적
+            const remainingGoalAmount = Math.max(0, monthlyGoal - totalActualEarned);
+            const remainingCount = uncompletedDays.length;
+
+            // 남은 영업일별 자동 증감 배분 (일 최대 30만원 상한 엄격 준수)
+            const dynamicGoalMap = {};
+
+            // 1) 이미 실적이 입력된 날은 기준 목표(상한 30만 이내) 표시
+            for (let d = 1; d <= daysInMonth; d++) {
+                const info = monthData.days[d];
+                if (!info.isWork) {
+                    dynamicGoalMap[d] = 0;
+                    continue;
+                }
+                const hasActual = info.actual !== null && info.actual !== '' && !isNaN(Number(info.actual));
+                if (hasActual) {
+                    dynamicGoalMap[d] = Math.min(dailyCap, baseDailyGoal);
+                }
+            }
+
+            // 2) 실적이 없는 남은 영업일들에 남은 목표액을 가중치+상한선(30만)으로 자동 증감 분배
+            if (remainingCount > 0 && remainingGoalAmount > 0) {
+                let pool = remainingGoalAmount;
+                let activeTargets = uncompletedDays.map(item => ({ ...item, allocated: 0, capped: false }));
+
+                // 상한선(300,000원)을 넘지 않도록 반복 분배
+                for (let iter = 0; iter < 5; iter++) {
+                    const uncapped = activeTargets.filter(t => !t.capped);
+                    if (uncapped.length === 0 || pool <= 0) break;
+
+                    const sumWeight = uncapped.reduce((acc, cur) => acc + cur.weight, 0);
+                    let overflow = 0;
+
+                    for (const item of uncapped) {
+                        const rawShare = (pool * (item.weight / sumWeight));
+                        const nextVal = item.allocated + rawShare;
+                        if (nextVal >= dailyCap) {
+                            overflow += (nextVal - dailyCap);
+                            item.allocated = dailyCap;
+                            item.capped = true;
+                        } else {
+                            item.allocated = nextVal;
+                        }
+                    }
+                    pool = overflow;
+                }
+
+                // 1,000원 단위 반올림 및 잔액 보정
+                let allocatedSum = 0;
+                for (let i = 0; i < activeTargets.length; i++) {
+                    const item = activeTargets[i];
+                    let rounded = Math.round(item.allocated / 1000) * 1000;
+                    if (rounded > dailyCap) rounded = dailyCap;
+                    item.finalGoal = rounded;
+                    allocatedSum += rounded;
+                }
+
+                // 반올림 오차(천원 단위)를 상한 미달 날짜에 미세 보정하여 월 목표 합계 정밀 일치
+                let diff = Math.round((remainingGoalAmount - allocatedSum) / 1000) * 1000;
+                for (const item of activeTargets) {
+                    if (diff === 0) break;
+                    if (diff > 0 && item.finalGoal + 1000 <= dailyCap) {
+                        item.finalGoal += 1000;
+                        diff -= 1000;
+                    } else if (diff < 0 && item.finalGoal - 1000 >= 0) {
+                        item.finalGoal -= 1000;
+                        diff += 1000;
+                    }
+                }
+
+                for (const item of activeTargets) {
+                    dynamicGoalMap[item.day] = item.finalGoal;
+                }
+            } else {
+                for (const item of uncompletedDays) {
+                    dynamicGoalMap[item.day] = 0;
+                }
+            }
+
+            const neededAvgPerDay = remainingCount > 0 ? Math.round(remainingGoalAmount / remainingCount) : 0;
+
+            return {
+                totalWorkDays,
+                completedWorkDays,
+                totalActualEarned,
+                remainingGoalAmount,
+                remainingCount,
+                neededAvgPerDay,
+                baseDailyGoal,
+                dynamicGoalMap
+            };
+        }
+
+        // ==========================================
+        // 5. UI 렌더링
+        // ==========================================
+        function formatNumber(num) {
+            return Number(num || 0).toLocaleString('ko-KR');
+        }
+
+        function renderApp() {
+            const monthData = ensureMonthData(currentYear, currentMonth);
+            const stats = calculateDynamicGoals(currentYear, currentMonth);
+
+            // 상단 월 표기
+            document.getElementById('header-month-label').textContent = `${currentYear}년 ${currentMonth}월`;
+            document.getElementById('calendar-year-sub').textContent = `${currentYear} YEAR`;
+            document.getElementById('calendar-english-month').textContent = ENGLISH_MONTHS[currentMonth - 1];
+
+            // 대시보드 통계 업데이트
+            const goal = appData.settings.monthlyGoal;
+            const cap = appData.settings.dailyCap;
+            const rate = goal > 0 ? Math.min(999, Math.round((stats.totalActualEarned / goal) * 100)) : 0;
+
+            document.getElementById('stat-monthly-goal').textContent = `${formatNumber(goal)}원`;
+            document.getElementById('stat-work-days-info').textContent = `배정 ${stats.totalWorkDays}일 · 일 상한 ${Math.round(cap/10000)}만`;
+
+            document.getElementById('stat-total-actual').textContent = `${formatNumber(stats.totalActualEarned)}원`;
+            document.getElementById('stat-achievement-rate').textContent = `${rate}%`;
+            document.getElementById('stat-completed-days').textContent = `실적 입력 ${stats.completedWorkDays}일 완료`;
+
+            document.getElementById('stat-remaining-amount').textContent = `${formatNumber(stats.remainingGoalAmount)}원`;
+            document.getElementById('stat-remaining-days').textContent = `남은 영업일 ${stats.remainingCount}일`;
+
+            document.getElementById('stat-needed-per-day').textContent = `${formatNumber(stats.neededAvgPerDay)}원`;
+
+            // 남은 일 평균목표 상태 뱃지 (증감 피드백)
+            const capBadge = document.getElementById('stat-cap-badge');
+            const deltaHint = document.getElementById('stat-delta-hint');
+            const neededCard = document.getElementById('card-daily-needed');
+
+            if (stats.remainingGoalAmount === 0) {
+                capBadge.textContent = '목표달성!';
+                capBadge.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950';
+                deltaHint.textContent = '월 목표액을 달성했습니다 🎉';
+                neededCard.className = 'bg-emerald-950/80 rounded-xl p-2.5 border border-emerald-500/60';
+            } else if (stats.neededAvgPerDay > cap) {
+                capBadge.textContent = '상한초과주의';
+                capBadge.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500 text-white';
+                deltaHint.textContent = `일 ${Math.round(cap/10000)}만원 초과 필요`;
+                neededCard.className = 'bg-rose-950/80 rounded-xl p-2.5 border border-rose-500/70';
+            } else {
+                const diffFromBase = stats.neededAvgPerDay - stats.baseDailyGoal;
+                if (stats.completedWorkDays === 0) {
+                    capBadge.textContent = '안정적';
+                    capBadge.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300';
+                    deltaHint.textContent = '실적 입력 시 목표 자동증감';
+                } else if (diffFromBase > 0) {
+                    capBadge.textContent = `+${formatNumber(diffFromBase)}↑`;
+                    capBadge.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400/25 text-amber-300';
+                    deltaHint.textContent = '부족분만큼 남은목표 상향';
+                } else {
+                    capBadge.textContent = `${formatNumber(diffFromBase)}↓`;
+                    capBadge.className = 'text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-400/25 text-sky-300';
+                    deltaHint.textContent = '초과달성으로 남은목표 하향';
+                }
+                neededCard.className = 'bg-blue-900/70 rounded-xl p-2.5 border border-blue-700/50';
+            }
+
+            // 달력 그리드 렌더링
+            const gridEl = document.getElementById('calendar-grid');
+            gridEl.innerHTML = '';
+
+            const firstDow = new Date(currentYear, currentMonth - 1, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+            const todayObj = new Date();
+            const isThisRealMonth = (todayObj.getFullYear() === currentYear && (todayObj.getMonth() + 1) === currentMonth);
+            const todayDate = todayObj.getDate();
+
+            // 앞쪽 빈칸
+            for (let i = 0; i < firstDow; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'bg-slate-200/85 min-h-[106px] sm:min-h-[124px] p-1';
+                gridEl.appendChild(emptyCell);
+            }
+
+            // 1일 ~ 말일 셀 생성
+            for (let d = 1; d <= daysInMonth; d++) {
+                const info = monthData.days[d];
+                const dow = new Date(currentYear, currentMonth - 1, d).getDay();
+                const assignedGoal = stats.dynamicGoalMap[d] || 0;
+                const hasActual = info.actual !== null && info.actual !== '' && !isNaN(Number(info.actual));
+                const actualVal = hasActual ? Number(info.actual) : 0;
+                const isToday = isThisRealMonth && d === todayDate;
+
+                const cell = document.createElement('div');
+                cell.onclick = () => openDayModal(d);
+
+                // 배경색 구분 (영업일 vs 토요일 vs 일반 휴무)
+                let bgClass = 'bg-white hover:bg-blue-50/80';
+                if (!info.isWork) {
+                    bgClass = dow === 6 ? 'bg-slate-100/95 hover:bg-slate-200/80' : 'bg-slate-50 hover:bg-slate-100';
+                }
+                const todayRing = isToday ? 'ring-2 ring-inset ring-amber-400' : '';
+
+                cell.className = `${bgClass} ${todayRing} min-h-[108px] sm:min-h-[126px] p-1 sm:p-1.5 flex flex-col justify-between cursor-pointer transition-colors relative select-none`;
+
+                // 날짜 색상
+                let dateColor = 'text-slate-800';
+                if (dow === 0) dateColor = 'text-rose-600';
+                else if (dow === 6) dateColor = 'text-blue-600';
+
+                // 상태 뱃지 디자인 (가로/세로 찌그러짐 없이 깔끔하게 표시)
+                let badgeHtml = '';
+                if (info.isWork) {
+                    const label = dow === 1 ? '월영업' : '영업';
+                    badgeHtml = `<span class="px-1 sm:px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[9px] sm:text-[11px] leading-none whitespace-nowrap">${label}</span>`;
+                } else {
+                    const label = dow === 6 ? '토휴무' : (dow === 1 ? '월휴무' : '휴무');
+                    const badgeStyle = dow === 6 ? 'bg-blue-100 text-blue-800' : 'bg-slate-200 text-slate-600';
+                    badgeHtml = `<span class="px-1 sm:px-1.5 py-0.5 rounded ${badgeStyle} font-bold text-[9px] sm:text-[11px] leading-none whitespace-nowrap">${label}</span>`;
+                }
+
+                // 본문 영역 (목표금액 & 실적금액)
+                let bodyHtml = '';
+                if (!info.isWork) {
+                    bodyHtml = `
+                        <div class="flex-1 flex flex-col items-center justify-center text-slate-400 py-1">
+                            <span class="text-[11px] sm:text-xs font-bold tracking-widest">${dow === 6 ? '토요충전' : '휴 무'}</span>
+                        </div>
+                    `;
+                } else {
+                    // 목표 금액 증감 시각 표시 (기준 대비 증감 여부)
+                    let goalColorClass = 'text-blue-950';
+                    let diffIndicator = '';
+                    if (!hasActual && stats.completedWorkDays > 0) {
+                        if (assignedGoal > stats.baseDailyGoal) {
+                            goalColorClass = 'text-rose-700'; // 부족분 반영 상향
+                            diffIndicator = '▲';
+                        } else if (assignedGoal < stats.baseDailyGoal) {
+                            goalColorClass = 'text-blue-700'; // 초과분 반영 하향
+                            diffIndicator = '▼';
+                        }
+                    }
+
+                    // 실적 텍스트 및 색상
+                    let actualText = '-';
+                    let actualColorClass = 'text-slate-400';
+                    if (hasActual) {
+                        actualText = formatNumber(actualVal);
+                        actualColorClass = actualVal >= assignedGoal ? 'text-emerald-600 font-black' : 'text-amber-600 font-black';
+                    }
+
+                    bodyHtml = `
+                        <div class="flex-1 flex flex-col justify-center mt-1 space-y-0.5 note-lines">
+                            <!-- 목표 줄 (붉은 밑줄 대상: 실적에 따라 자동 증감) -->
+                            <div class="text-right pr-0.5 border-b border-slate-200/90 pb-0.5">
+                                <div class="text-[8px] sm:text-[10px] text-slate-400 leading-none">목표${diffIndicator}</div>
+                                <div class="text-[10px] sm:text-xs md:text-[13px] font-extrabold ${goalColorClass} num-tight leading-tight">
+                                    ${formatNumber(assignedGoal)}
+                                </div>
+                            </div>
+                            <!-- 실적 줄 (파란 밑줄 대상: 실제 입력 금액) -->
+                            <div class="text-right pr-0.5 pt-0.5">
+                                <div class="text-[8px] sm:text-[10px] text-slate-400 leading-none">실적</div>
+                                <div class="text-[10px] sm:text-xs md:text-[13px] ${actualColorClass} num-tight leading-tight">
+                                    ${actualText}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                cell.innerHTML = `
+                    <div class="flex items-center justify-between gap-0.5">
+                        <span class="font-hand text-sm sm:text-base font-bold ${dateColor} leading-none">${d}</span>
+                        ${badgeHtml}
+                    </div>
+                    ${bodyHtml}
+                    <div class="flex justify-end items-center pt-0.5">
+                        <span class="text-[9px] text-slate-400">✎</span>
+                    </div>
+                `;
+                gridEl.appendChild(cell);
+            }
+
+            // 뒤쪽 빈칸 채우기
+            const totalCells = firstDow + daysInMonth;
+            const remainder = totalCells % 7;
+            if (remainder > 0) {
+                for (let i = 0; i < 7 - remainder; i++) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'bg-slate-200/85 min-h-[106px] sm:min-h-[124px] p-1';
+                    gridEl.appendChild(emptyCell);
+                }
+            }
+        }
+
+        // ==========================================
+        // 6. 모달 및 사용자 상호작용 핸들러
+        // ==========================================
+        function openDayModal(day) {
+            selectedDayNumber = day;
+            const monthData = ensureMonthData(currentYear, currentMonth);
+            const info = monthData.days[day];
+            const stats = calculateDynamicGoals(currentYear, currentMonth);
+            const dow = new Date(currentYear, currentMonth - 1, day).getDay();
+
+            document.getElementById('modal-date-subtitle').textContent = `${currentYear}년 ${currentMonth}월 ${day}일 (${DAY_NAMES_KR[dow]}요일)`;
+            document.getElementById('modal-current-goal').textContent = `${formatNumber(stats.dynamicGoalMap[day] || 0)}원`;
+
+            modalTempIsWork = info.isWork;
+            updateModalWorkButtons();
+
+            const inputEl = document.getElementById('input-actual-amount');
+            inputEl.value = (info.actual !== null && info.actual !== '') ? info.actual : '';
+
+            const modal = document.getElementById('day-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeDayModal() {
+            const modal = document.getElementById('day-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            selectedDayNumber = null;
+        }
+
+        function setModalWorkStatus(isWork) {
+            modalTempIsWork = isWork;
+            updateModalWorkButtons();
+        }
+
+        function updateModalWorkButtons() {
+            const btnWork = document.getElementById('btn-modal-work');
+            const btnOff = document.getElementById('btn-modal-off');
+            const actualSection = document.getElementById('modal-actual-section');
+            const goalBox = document.getElementById('modal-goal-box');
+
+            if (modalTempIsWork) {
+                btnWork.className = 'py-2.5 rounded-xl font-extrabold text-sm border-2 border-emerald-600 bg-emerald-50 text-emerald-800 shadow-xs';
+                btnOff.className = 'py-2.5 rounded-xl font-bold text-sm border-2 border-slate-200 bg-white text-slate-500';
+                actualSection.classList.remove('opacity-40', 'pointer-events-none');
+                goalBox.classList.remove('opacity-40');
+            } else {
+                btnWork.className = 'py-2.5 rounded-xl font-bold text-sm border-2 border-slate-200 bg-white text-slate-500';
+                btnOff.className = 'py-2.5 rounded-xl font-extrabold text-sm border-2 border-blue-600 bg-blue-50 text-blue-800 shadow-xs';
+                actualSection.classList.add('opacity-40', 'pointer-events-none');
+                goalBox.classList.add('opacity-40');
+            }
+        }
+
+        function addQuickAmount(delta) {
+            const inputEl = document.getElementById('input-actual-amount');
+            const cur = Number(inputEl.value) || 0;
+            inputEl.value = cur + delta;
+        }
+
+        function setExactAmount(val) {
+            document.getElementById('input-actual-amount').value = val;
+        }
+
+        function setGoalAmountToInput() {
+            if (!selectedDayNumber) return;
+            const stats = calculateDynamicGoals(currentYear, currentMonth);
+            const g = stats.dynamicGoalMap[selectedDayNumber] || 0;
+            document.getElementById('input-actual-amount').value = g;
+        }
+
+        function clearActualInput() {
+            document.getElementById('input-actual-amount').value = '';
+        }
+
+        function saveDayModal() {
+            if (!selectedDayNumber) return;
+            const monthData = ensureMonthData(currentYear, currentMonth);
+            const info = monthData.days[selectedDayNumber];
+
+            // 근무/휴무 변경 영구 저장
+            info.isWork = modalTempIsWork;
+            info.manualWork = true;
+
+            if (!modalTempIsWork) {
+                // 휴무로 전환 시 실적 초기화
+                info.actual = null;
+            } else {
+                const rawVal = document.getElementById('input-actual-amount').value.trim();
+                if (rawVal === '') {
+                    info.actual = null;
+                } else {
+                    const numVal = Math.max(0, Number(rawVal));
+                    info.actual = isNaN(numVal) ? null : numVal;
+                }
+            }
+
+            saveAppData();
+            closeDayModal();
+            renderApp();
+        }
+
+        // 월 이동 및 현재 달 자동 고정 복귀
+        function changeMonth(delta) {
+            let nextM = currentMonth + delta;
+            let nextY = currentYear;
+            if (nextM > 12) {
+                nextM = 1;
+                nextY++;
+            } else if (nextM < 1) {
+                nextM = 12;
+                nextY--;
+            }
+            // 2026년 11월 이전으로는 이동 제한
+            if (nextY < 2026 || (nextY === 2026 && nextM < 11)) {
+                return;
+            }
+            currentYear = nextY;
+            currentMonth = nextM;
+            renderApp();
+        }
+
+        function goToCurrentRealMonth() {
+            const real = getActiveRealYearMonth();
+            currentYear = real.year;
+            currentMonth = real.month;
+            renderApp();
+        }
+
+        function resetToSmartSchedule() {
+            const key = getMonthKey(currentYear, currentMonth);
+            appData.months[key] = createSmartMonthSchedule(currentYear, currentMonth);
+            saveAppData();
+            renderApp();
+        }
+
+        // 설정 모달
+        function openSettingsModal() {
+            document.getElementById('setting-monthly-goal').value = appData.settings.monthlyGoal;
+            document.getElementById('setting-target-days').value = appData.settings.targetWorkDays;
+            document.getElementById('setting-daily-cap').value = appData.settings.dailyCap;
+            const modal = document.getElementById('settings-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function saveSettingsModal() {
+            const mGoal = Number(document.getElementById('setting-monthly-goal').value) || 6000000;
+            const tDays = Math.min(31, Math.max(1, Number(document.getElementById('setting-target-days').value) || 22));
+            const dCap = Number(document.getElementById('setting-daily-cap').value) || 300000;
+
+            appData.settings.monthlyGoal = mGoal;
+            appData.settings.targetWorkDays = tDays;
+            appData.settings.dailyCap = dCap;
+
+            saveAppData();
+            closeSettingsModal();
+            renderApp();
+        }
+
+        // 달이 바뀌면 자동으로 해당 달에 고정되도록 주기적 체크 (자정 넘김/앱 재활성화 대응)
+        function syncRealMonthIfChanged() {
+            const real = getActiveRealYearMonth();
+            const nowKey = `${real.year}-${real.month}`;
+            if (nowKey !== lastCheckedRealMonthKey) {
+                lastCheckedRealMonthKey = nowKey;
+                currentYear = real.year;
+                currentMonth = real.month;
+                renderApp();
+            }
+        }
+
+        window.addEventListener('focus', syncRealMonthIfChanged);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) syncRealMonthIfChanged();
+        });
+        setInterval(syncRealMonthIfChanged, 60000);
+
+        // 초기 실행
+        loadAppData();
+        goToCurrentRealMonth();
+    </script>
+</body>
+</html>
+```
